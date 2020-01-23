@@ -1,0 +1,129 @@
+
+
+
+
+[ ] Perspective
+
+links:
+
+https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function
+https://www.scratchapixel.com/lessons/3d-basic-rendering/computing-pixel-coordinates-of-3d-point
+https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix
+
+We are making things feel like they are further or closer by dividing the clip
+space of X and Y by Z.
+
+If we have a line from (10, 15) to (20,15), it's 10 units long, so we draw lets
+say 10 pixels long line. If we divide by Z then for example if Z == 1;
+
+10 / 1 = 10
+20 / 1 = 20
+abs (10 - 20) = 10;
+
+it would be 10 pixels long. If Z is 2:
+
+10 / 2 = 5
+20 / 2 = 10
+abs (5 - 10) = 5;
+
+it would be 5 pixels long. If Z is 3 => 3.3333
+
+As Z increases the point at which we look is further away, and we'll draw it
+smaller. If we divide in clip space we might get better results becauze Z will
+be a smaller numer (-1 to 1). If we add fudgeFactor to mul Z before we divide
+we can adjust how much smaller things get for given distance.
+
+So we add fudgeFactor to our vertex shader. WebGL takes x,y,z,w value we assign
+to gl_Position in our vertex shader and divides it by w automatically.
+
+Matrix like:
+1, 0, 0, 0,
+0, 1, 0, 0,
+0, 0, 1, 1,
+0, 0, 0, 0,
+will copy z to w.       =>  
+
+x_out = x_in * 1 +
+        y_in * 0 +
+        z_in * 0 +
+        w_in * 0 ;
+
+y_out = x_in * 0 +
+        y_in * 1 +
+        z_in * 0 +
+        w_in * 0 ;
+
+z_out = x_in * 0 +
+        y_in * 0 +
+        z_in * 1 +
+        w_in * 0 ;
+
+w_out = x_in * 0 +
+        y_in * 0 +
+        z_in * 1 +
+        w_in * 0 ;
+
+it's simplified like this
+
+x_out = x_in;
+y_out = y_in;
+z_out = z_in;
+w_out = z_in;
+
+
+
+We can add the plus 1 we had before with this matrix since we know w_in is always 1.0.
+
+1, 0, 0, 0,
+0, 1, 0, 0,
+0, 0, 1, 1,
+0, 0, 0, 1,
+
+that will change the W calculation to
+
+w_out = x_in * 0 +
+        y_in * 0 +
+        z_in * 1 +
+        w_in * 1 ;
+
+and since we know w_in = 1.0 then that's really
+
+w_out = z_in + 1;
+
+Finally we can work our fudgeFactor back in if the matrix is this
+
+1, 0, 0, 0,
+0, 1, 0, 0,
+0, 0, 1, fudgeFactor,
+0, 0, 0, 1,
+
+which means
+
+w_out = x_in * 0 +
+        y_in * 0 +
+        z_in * fudgeFactor +
+        w_in * 1 ;
+
+and simplified that's
+
+w_out = z_in * fudgeFactor + 1;
+
+
+
+[ ] 3D Camera:
+
+A projection requires things to be in front of the origin on the -Z axis. To achieve this what we want to do is move the camera to the origin and move everything else the right amount so it's still in the same place relative to the camera. We need to effectively move the world in front of the camera. The easiest way to do this is to use an "inverse" matrix.
+
+Up until this point we've used translation, rotation and scale to affect the position and orientation of our 'F'. After multiplying all the matrices together we have a single matrix that represents how to move the 'F' from the origin to the place, size and orientation we want it. We can do the same for a camera. Once we have the matrix that tells us how to move and rotate the camera from the origin to where we want it we can compute its inverse which will give us a matrix that tells us how to move and rotate everything else the opposite amount which will effectively make it so the camera is at (0, 0, 0) and we've moved everything in front of it.
+
+
+
+
+
+
+
+
+
+
+
+

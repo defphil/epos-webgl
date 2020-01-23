@@ -33,7 +33,8 @@ function main() {
     // Define colors 
     const positionLocation = gl.getAttribLocation(program, "a_position");
     const colorLocation = gl.getAttribLocation(program, "a_color");
-        
+    const fudgeLocation = gl.getUniformLocation(program, "u_fudgeFactor");
+    const matUniformLocation = gl.getUniformLocation(program, "u_matrix");
     // VAO
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
@@ -47,8 +48,7 @@ function main() {
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-    // TODO: Define color data for object
-    // Pass colors data
+
     const colors = require("./data/fm-letter-colors").default;
     const colorsBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
@@ -56,112 +56,58 @@ function main() {
     gl.enableVertexAttribArray(colorLocation);
     gl.vertexAttribPointer(colorLocation, 3, gl.UNSIGNED_BYTE, true, 0, 0);
 
-    // Set default canvas size to fullscreen and clear it
+
     updateCanvasSize(gl, canvas);
     gl.clearColor(0.95, 0.95, 0.95, 1);
     gl.useProgram(program);
 
-    const translation = [-50, 0, -360];
-    const scale = [1.2, 1.2, 1.2];
-    const angles = [190, 40, 30].map(degToRad);
-    gl.enable(gl.CULL_FACE);
-    gl.enable(gl.DEPTH_TEST);
 
-    const matUniformLocation = gl.getUniformLocation(program, "u_matrix");
+    gl.enable(gl.CULL_FACE);
+    gl.enable(gl.DEPTH_TEST);    
+    // ------------------------ WebGL BOILERPLATE ENDS HERE -------------------------------
+    //@@ TODO: FIX CAMERA INVERSION!
+    let fieldOfViewRadians = degToRad(90);
+    let cameraAngleRadians = degToRad(0);
     
     const draw = () => {
-        angles[0] += 0.01;
-	angles[1] += 0.01;
-        angles[2] += 0.02;
-        const pMat = M4.projectPerspective(degToRad(80), canvas.clientWidth / canvas.clientHeight, 1, 2000);
+	
+	const num_of_objects = 5;
+	const radius = 200;
 
-        const tMat = M4.translate(translation[0], translation[1], translation[2]);
-        const rxMat = M4.rotateX(angles[0]);
-        const ryMat = M4.rotateY(angles[1]);
-        const rzMat = M4.rotateZ(angles[2]);
-        const sMat = M4.scale(scale[0], scale[1], scale[2]);
-	// Apply all transformations for object rotations
-        const m = M4.multiply(pMat, tMat, rxMat, ryMat, rzMat, sMat);
+	const aspect = canvas.clientWidth / canvas.clientHeight;
+	const zNear = 1;
+	const zFar = 2000;
+	const pMat = M4.projectPerspective(fieldOfViewRadians, aspect, zNear, zFar);
+	
+	const cameraMat = M4.translate(M4.rotateY(cameraAngleRadians) , 0, 0, radius * 1.5);
 
-        gl.uniformMatrix4fv(matUniformLocation, false, m);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLES, 0, positions.length / 3);
+	const viewMat = M4.inverse(cameraMat);
+	const viewProjMat = M4.multiply(pMat, viewMat);
+
+	for (var ii = 0; ii < num_of_objects; ++ii) {
+	    let angle = ii * Math.PI * 2 / num_of_objects;
+	    
+	    const x = Math.cos(angle) * radius;
+	    const z = Math.sin(angle) * radius;
+	    
+	    const matrix = M4.translate(viewProjMat, x, 0 , z);
+	    
+	    gl.uniformMatrix4fv(matUniformLocation, false, matrix);
+	    gl.drawArrays(gl.TRIANGLES, 0, positions.length /3);
+	}
 	
         requestAnimationFrame(draw);
     };
 
-    // Transformation controls
     window.addEventListener("keydown", (e) => {
-	// Scaling controls
-        const scaleDiff = 0.1;
+	if (e.key === "d") {
+	    cameraAngleRadians += 0.02;
+	}
 
-        if (e.key === "+") {
-            scale[0] += scaleDiff;
-            scale[1] += scaleDiff;
-            scale[2] += scaleDiff;            
+	if (e.key === "a") {
+	    cameraAngleRadians -= 0.02;
+	}
 
-        }
-
-        if (e.key === "-") {
-            scale[0] -= scaleDiff;
-            scale[1] -= scaleDiff;
-            scale[2] -= scaleDiff;            
-        }
-
-	// Translation with arrow keys
-        const translationDiff = 20;
-
-        if (e.key === "ArrowUp") {
-            translation[1] -= translationDiff;
-        }
-
-        if (e.key === "ArrowDown") {
-            translation[1] += translationDiff;
-        }
-
-        if (e.key === "ArrowLeft") {
-            translation[0] -= translationDiff;
-        }
-
-        if (e.key === "ArrowRight") {
-            translation[0] += translationDiff;
-        }
-
-        if (e.key === "1") {
-            translation[2] -= translationDiff;
-        }
-
-        if (e.key === "2") {
-            translation[2] += translationDiff;
-        }
-
-        // Rotation controls with WASDQE
-        const rotationDiffDegrees = 5;
-        const rotationDiffRads = rotationDiffDegrees * Math.PI / 180;
-
-        if (e.key === "w") {
-            angles[0] += rotationDiffRads;
-        }
-
-        if (e.key === "s") {
-            angles[0] -= rotationDiffRads;
-        }
-
-        if (e.key === "q") {
-            angles[1] += rotationDiffRads;
-        }
-
-        if (e.key === "e") {
-            angles[1] -= rotationDiffRads;
-        }
-
-        if (e.key === "a") {
-            angles[2] += rotationDiffRads;
-        }
-
-        if (e.key === "d") {
-            angles[2] -= rotationDiffRads;
-        }
     });
 
     window.addEventListener("resize", () => {
