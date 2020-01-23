@@ -66,47 +66,54 @@ function main() {
     gl.enable(gl.DEPTH_TEST);    
     // ------------------------ WebGL BOILERPLATE ENDS HERE -------------------------------
     //@@ TODO: FIX CAMERA INVERSION!
-    let fieldOfViewRadians = degToRad(90);
+    let fieldOfViewRadians = degToRad(60);
     let cameraAngleRadians = degToRad(0);
+
     
     const draw = () => {
-	
-	const num_of_objects = 5;
-	const radius = 200;
-
-	const aspect = canvas.clientWidth / canvas.clientHeight;
-	const zNear = 1;
-	const zFar = 2000;
-	const pMat = M4.projectPerspective(fieldOfViewRadians, aspect, zNear, zFar);
-	
-	const cameraMat = M4.translate(M4.rotateY(cameraAngleRadians) , 0, 0, radius * 1.5);
-
-	const viewMat = M4.inverse(cameraMat);
-	const viewProjMat = M4.multiply(pMat, viewMat);
-
-	for (var ii = 0; ii < num_of_objects; ++ii) {
-	    let angle = ii * Math.PI * 2 / num_of_objects;
 	    
-	    const x = Math.cos(angle) * radius;
-	    const z = Math.sin(angle) * radius;
+	    const num_of_objects = 5;
+        const radius = 200;
+        // Position of one locked F around which we'll move camera
+        const fPosition = [radius, 0, 0];
+        
+	    const aspect = canvas.clientWidth / canvas.clientHeight;
+	    const zNear = 1;
+	    const zFar = 2000;
+	    const pMat = M4.projectPerspective(fieldOfViewRadians, aspect, zNear, zFar);
 	    
-	    const matrix = M4.translate(viewProjMat, x, 0 , z);
+        const cameraMat = M4.translate(M4.rotateY(cameraAngleRadians), 0, 50, radius * 1.5);
+        const cameraPos = [cameraMat[12], cameraMat[13], cameraMat[14]];
+        const up = [0, 1, 0];
+        var cameraMatrix = M4.lookAt(cameraPos, fPosition, up);
+
+	    const viewMat = M4.inverse(cameraMatrix);
+        
+	    const viewProjMat = M4.multiply(pMat, viewMat);
+
+	    for (var ii = 0; ii < num_of_objects; ++ii) {
+	        let angle = ii * Math.PI * 2 / num_of_objects;
+	        
+	        const x = Math.cos(angle) * radius;
+	        const z = Math.sin(angle) * radius;
+	        
+	        const matrix = M4.translate(viewProjMat, x, 0 , z);
+	        
+	        gl.uniformMatrix4fv(matUniformLocation, false, matrix);
+	        gl.drawArrays(gl.TRIANGLES, 0, positions.length /3);
+	    }
 	    
-	    gl.uniformMatrix4fv(matUniformLocation, false, matrix);
-	    gl.drawArrays(gl.TRIANGLES, 0, positions.length /3);
-	}
-	
         requestAnimationFrame(draw);
     };
 
     window.addEventListener("keydown", (e) => {
-	if (e.key === "d") {
-	    cameraAngleRadians += 0.02;
-	}
-
-	if (e.key === "a") {
-	    cameraAngleRadians -= 0.02;
-	}
+	    if (e.key === "d") {
+	        cameraAngleRadians += 0.02;
+	    }
+        
+	    if (e.key === "a") {
+	        cameraAngleRadians -= 0.02;
+	    }
 
     });
 
