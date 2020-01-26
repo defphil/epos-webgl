@@ -23,23 +23,25 @@ function main() {
     // Create program
     const program = createProgram(gl, vertShader, fragShader);
 
-    // Delete vertex shader
+    // Delete shaders
     gl.detachShader(program, vertShader);
     gl.deleteShader(vertShader);
 
     gl.detachShader(program, fragShader);
     gl.deleteShader(fragShader);
 
-    // Define colors 
     const positionLocation = gl.getAttribLocation(program, "a_position");
-    const colorLocation = gl.getAttribLocation(program, "a_color");
-    const fudgeLocation = gl.getUniformLocation(program, "u_fudgeFactor");
+    const normalsLocation = gl.getAttribLocation(program, "a_normal");
+    
+//  const fudgeLocation = gl.getUniformLocation(program, "u_fudgeFactor");
     const matUniformLocation = gl.getUniformLocation(program, "u_matrix");
+    const colorLocation = gl.getUniformLocation(program, "u_color");
+    const reverseLightDirectionLocation = gl.getUniformLocation(program, "u_reverseLightDirection");
+    
     // VAO
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
 
-    // TODO: Define letter verts
     // Pass positions data
     const positions = require("./data/fm-letter-verts").default;
     const positionsBuffer = gl.createBuffer();
@@ -49,12 +51,20 @@ function main() {
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
 
-    const colors = require("./data/fm-letter-colors").default;
-    const colorsBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(colors), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(colorLocation);
-    gl.vertexAttribPointer(colorLocation, 3, gl.UNSIGNED_BYTE, true, 0, 0);
+    // const colors = require("./data/fm-letter-colors").default;
+    // const colorsBuffer = gl.createBuffer();
+    // gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
+    // gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(colors), gl.STATIC_DRAW);
+    // gl.enableVertexAttribArray(colorLocation);
+    // gl.vertexAttribPointer(colorLocation, 3, gl.UNSIGNED_BYTE, true, 0, 0);
+
+    // Creating buffer for normals
+    const normals = require("./data/normals").default;
+    const normalsBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(normalsLocation);
+    gl.vertexAttribPointer(normalsLocation, 3, gl.FLOAT, false, 0, 0);
 
 
     updateCanvasSize(gl, canvas);
@@ -66,53 +76,44 @@ function main() {
     gl.enable(gl.DEPTH_TEST);    
     // ------------------------ WebGL BOILERPLATE ENDS HERE -------------------------------
     //@@ TODO: FIX CAMERA INVERSION!
-    let fieldOfViewRadians = degToRad(60);
-    let cameraAngleRadians = degToRad(0);
-
+    let fieldOfViewRadians = degToRad(90);
+    let fRotationRadians = 0;
     
     const draw = () => {
-	    
-	    const num_of_objects = 5;
-        const radius = 200;
         // Position of one locked F around which we'll move camera
-        const fPosition = [radius, 0, 0];
-        
+        // Form projection
 	    const aspect = canvas.clientWidth / canvas.clientHeight;
 	    const zNear = 1;
 	    const zFar = 2000;
-	    const pMat = M4.projectPerspective(fieldOfViewRadians, aspect, zNear, zFar);
-	    
-        const cameraMat = M4.translate(M4.rotateY(cameraAngleRadians), 0, 50, radius * 1.5);
-        const cameraPos = [cameraMat[12], cameraMat[13], cameraMat[14]];
+        const projectionMat = M4.projectPerspective(fieldOfViewRadians, aspect, zNear, zFar);
+        // Form camera
+        const camera = [100, 150, 200];
+        const target = [0, 35, 0];
         const up = [0, 1, 0];
-        var cameraMatrix = M4.lookAt(cameraPos, fPosition, up);
-
-	    const viewMat = M4.inverse(cameraMatrix);
-        
-	    const viewProjMat = M4.multiply(pMat, viewMat);
-
-	    for (var ii = 0; ii < num_of_objects; ++ii) {
-	        let angle = ii * Math.PI * 2 / num_of_objects;
-	        
-	        const x = Math.cos(angle) * radius;
-	        const z = Math.sin(angle) * radius;
-	        
-	        const matrix = M4.translate(viewProjMat, x, 0 , z);
-	        
-	        gl.uniformMatrix4fv(matUniformLocation, false, matrix);
-	        gl.drawArrays(gl.TRIANGLES, 0, positions.length /3);
-	    }
+        const cameraMat = M4.lookAt(camera, target, up);
+        // Form view
+        const viewMat = M4.inverse(cameraMat);
+        const viewProjectionMat = M4.multiply(projectionMat, viewMat);
+        const matrix = M4.multiply(viewProjectionMat, M4.rotateY(fRotationRadians));
 	    
+	    gl.uniformMatrix4fv(matUniformLocation, false, matrix);
+        // Set the color to use in this case purple;
+        gl.uniform4fv(colorLocation, [0.5, 0.1, 0.7, 1]);
+        // normalized location is the location of the light source
+        gl.uniform3fv(reverseLightDirectionLocation, M4.normalizeVec([0.5, 0.7, 1]));
+        //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	    gl.drawArrays(gl.TRIANGLES, 0, positions.length/3);
         requestAnimationFrame(draw);
     };
 
+    
     window.addEventListener("keydown", (e) => {
 	    if (e.key === "d") {
-	        cameraAngleRadians += 0.02;
+            fRotationRadians += 0.1;
 	    }
         
 	    if (e.key === "a") {
-	        cameraAngleRadians -= 0.02;
+            fRotationRadians -= 0.1;
 	    }
 
     });
@@ -121,7 +122,8 @@ function main() {
         updateCanvasSize(gl, canvas);
     });
 
-    requestAnimationFrame(draw);
+    // draw everything
+   requestAnimationFrame(draw);
 }
 
 main();

@@ -1,6 +1,4 @@
 export class M4 {
-
-    
     public static translation(x: number, y: number, z: number):number[] {
         return [
             1, 0, 0, 0,
@@ -275,6 +273,5 @@ export class M4 {
             zAxis[0], zAxis[1], zAxis[2], 0,
             cameraPosition[0], cameraPosition[1], cameraPosition[2], 1
         ];
-    }
-    
+    }    
 }
