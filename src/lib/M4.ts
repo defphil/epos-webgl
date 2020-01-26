@@ -273,5 +273,25 @@ export class M4 {
             zAxis[0], zAxis[1], zAxis[2], 0,
             cameraPosition[0], cameraPosition[1], cameraPosition[2], 1
         ];
-    }    
+    }
+
+    public static transpose(m:number[]):number[] {
+        return [
+            m[0], m[4], m[8], m[12],
+            m[1], m[5], m[9], m[13],
+            m[2], m[6], m[10], m[14],
+            m[3], m[7], m[11], m[15],
+        ];
+    }
+
+    public static transformVector(m:number[], v:number[], dst:number[]) {
+        const len = m.length;
+        
+        for (let i = 0; i < len; ++i) {
+            dst[i] = 0.0;
+            for (let j = 0; j < 4; ++j) {
+                dst[i] += v[j] * m[j * 4 + i];
+            }
+        }
+    }
 }

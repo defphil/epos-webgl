@@ -2,7 +2,7 @@
 
 
 
-[ ] Perspective
+[X] Perspective
 
 links:
 
@@ -110,11 +110,21 @@ w_out = z_in * fudgeFactor + 1;
 
 
 
-[ ] 3D Camera:
+[X] 3D Camera:
 
 A projection requires things to be in front of the origin on the -Z axis. To achieve this what we want to do is move the camera to the origin and move everything else the right amount so it's still in the same place relative to the camera. We need to effectively move the world in front of the camera. The easiest way to do this is to use an "inverse" matrix.
 
 Up until this point we've used translation, rotation and scale to affect the position and orientation of our 'F'. After multiplying all the matrices together we have a single matrix that represents how to move the 'F' from the origin to the place, size and orientation we want it. We can do the same for a camera. Once we have the matrix that tells us how to move and rotate the camera from the origin to where we want it we can compute its inverse which will give us a matrix that tells us how to move and rotate everything else the opposite amount which will effectively make it so the camera is at (0, 0, 0) and we've moved everything in front of it.
+
+
+
+[ ] Directional Lighting
+
+Directional lighting assumes the light is coming uniformly from one direction. The sun on a clear day is often considered a directional light. It's so far way that its rays can be considered to be hitting the surface of an object all in parallel.
+
+Computing directional lighting is actually pretty simple. If we know what direction the light is traveling and we know what direction the surface of the object is facing we can take the dot product of the 2 directions and it will give us the cosine of the angle between the 2 directions.
+
+If we know what direction the surface of our 3d object is facing and we know the direction the light is shining then we can just take the dot product of them and it will give us a number 1 if the light is pointing directly at the surface and -1 if they are pointing directly opposite. We can multiply our color by that dot product value and we have lighted object!
 
 
 

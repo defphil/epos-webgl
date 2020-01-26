@@ -33,8 +33,8 @@ function main() {
     const positionLocation = gl.getAttribLocation(program, "a_position");
     const normalsLocation = gl.getAttribLocation(program, "a_normal");
     
-//  const fudgeLocation = gl.getUniformLocation(program, "u_fudgeFactor");
-    const matUniformLocation = gl.getUniformLocation(program, "u_matrix");
+    const worldViewProjectionLocation = gl.getUniformLocation(program, "u_worldViewProjection");
+    const worldInverseTransposeLocation = gl.getUniformLocation(program, "u_worldInverseTranspose");
     const colorLocation = gl.getUniformLocation(program, "u_color");
     const reverseLightDirectionLocation = gl.getUniformLocation(program, "u_reverseLightDirection");
     
@@ -46,6 +46,19 @@ function main() {
     const positions = require("./data/fm-letter-verts").default;
     const positionsBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionsBuffer);
+
+    // Center the F around the origin and flip it around.
+    // TODO: Think of implementingthis as separate function
+    let objMatrix = M4.rotateX(Math.PI);
+    let newMat: number[];
+    newMat = [0, 0, 0, 0];
+    objMatrix = M4.translate(objMatrix, -50, -75, -15);
+    for (let i = 0; i < positions.length; i+=3) {
+        M4.transformVector(objMatrix, [positions[i+0], positions[i+1], positions[i+2], 1], newMat);
+        positions[i+0] = newMat[0];
+        positions[i+1] = newMat[1];
+        positions[i+2] = newMat[2];
+    }
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
@@ -88,20 +101,25 @@ function main() {
         const projectionMat = M4.projectPerspective(fieldOfViewRadians, aspect, zNear, zFar);
         // Form camera
         const camera = [100, 150, 200];
-        const target = [0, 35, 0];
+        const target = [0, 15, 0];
         const up = [0, 1, 0];
         const cameraMat = M4.lookAt(camera, target, up);
         // Form view
         const viewMat = M4.inverse(cameraMat);
         const viewProjectionMat = M4.multiply(projectionMat, viewMat);
-        const matrix = M4.multiply(viewProjectionMat, M4.rotateY(fRotationRadians));
+        
+        const worldMatrix = M4.rotateY(fRotationRadians);
+        const worldViewProjectionMat = M4.multiply(viewProjectionMat, worldMatrix);
+        const worldInverseMat = M4.inverse(worldMatrix);
+        const worldInverseTransposeMat = M4.transpose(worldInverseMat);
 	    
-	    gl.uniformMatrix4fv(matUniformLocation, false, matrix);
-        // Set the color to use in this case purple;
-        gl.uniform4fv(colorLocation, [0.5, 0.1, 0.7, 1]);
-        // normalized location is the location of the light source
+	    gl.uniformMatrix4fv(worldViewProjectionLocation, false, worldViewProjectionMat);
+        gl.uniformMatrix4fv(worldInverseTransposeLocation, false, worldInverseTransposeMat);
+        gl.uniform4fv(colorLocation, [0.2, 1, 0.2, 1]);
         gl.uniform3fv(reverseLightDirectionLocation, M4.normalizeVec([0.5, 0.7, 1]));
-        //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        // draw
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	    gl.drawArrays(gl.TRIANGLES, 0, positions.length/3);
         requestAnimationFrame(draw);
     };
@@ -109,11 +127,11 @@ function main() {
     
     window.addEventListener("keydown", (e) => {
 	    if (e.key === "d") {
-            fRotationRadians += 0.1;
+            fRotationRadians += 0.07;
 	    }
         
 	    if (e.key === "a") {
-            fRotationRadians -= 0.1;
+            fRotationRadians -= 0.07;
 	    }
 
     });
